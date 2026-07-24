@@ -2,12 +2,17 @@ name: Build Desktop Apps (Windows & Linux)
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  release:
+  build:
     name: Build & Package for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
 
@@ -27,8 +32,21 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build and Package Electron App
-        uses: samuelmeuli/action-electron-builder@v1
+      - name: Build Web Frontend
+        run: npm run build
+
+      - name: Build & Package Desktop App
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --config.directories.output=release --publish never
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          release: true
+          name: nexus-ide-${{ matrix.os }}
+          path: |
+            release/*.exe
+            release/*.AppImage
+            release/*.deb
+            release/*.pacman
+            release/*.zip
